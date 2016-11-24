@@ -37,6 +37,15 @@ Maintainer: Sylvain Miermont
 #include "parson.h"
 #include "loragw_hal.h"
 
+/* header files to support socket programming */
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <errno.h>
+#include <arpa/inet.h>
+
+
 /* -------------------------------------------------------------------------- */
 /* --- PRIVATE MACROS ------------------------------------------------------- */
 
@@ -318,6 +327,7 @@ void usage(void) {
 	printf( " -r <int> rotate log file every N seconds (-1 disable log rotation)\n");
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* --- MAIN FUNCTION -------------------------------------------------------- */
 
@@ -346,6 +356,19 @@ int main(int argc, char **argv)
 	char fetch_timestamp[30];
 	struct tm * x;
 	
+	/*socket parameters*/
+    int sockfd = 0;
+    uint8_t recvBuff[256];
+    memset(recvBuff, '0', sizeof(recvBuff));
+    struct sockaddr_in serv_addr;
+
+    /* Initialize sockaddr_in data structure */
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(1680); // port
+    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+
+
 	/* parse command line options */
 	while ((i = getopt (argc, argv, "hr:")) != -1) {
 		switch (i) {
@@ -527,13 +550,40 @@ int main(int argc, char **argv)
 			fprintf(log_file, "%+5.1f,", p->snr);
 			
 			/* writing hex-encoded payload (bundled in 32-bit words) */
+			printf("DATA: ");
 			fputs("\"", log_file);
 			for (j = 0; j < p->size; ++j) {
 				/* Removed the bundling of 32 bit words*/
 				//if ((j > 0) && (j%4 == 0)) fputs("-", log_file);
 				fprintf(log_file, "%02X", p->payload[j]);
+
+				printf("%c",p->payload[j]);
+				/*to copy the payload to recvBuff*/
+			    recvBuff[j]=p->payload[j];
 			}
+			printf("\n");
 			
+			if (p->status == STAT_CRC_OK){
+			    /* Create a socket first */
+			    if((sockfd = socket(AF_INET, SOCK_STREAM, 0))< 0){
+			        printf("\n Error : Could not create socket \n");
+			        return 1;
+			    }
+
+				/* Attempt a connection */
+				if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))<0){
+					printf("\n Error : Connect Failed \n");
+					return 1;
+				}
+		    	/* If read was success, send data. */
+		    	if(p->size > 0){
+		    		printf("Sending \n");
+		    		write(sockfd, recvBuff, p->size);
+		    	}
+		    	/*close socket*/
+		    	close(sockfd);
+			}
+
 			/* end of log file line */
 			fputs("\"\n", log_file);
 			fflush(log_file);
@@ -552,6 +602,7 @@ int main(int argc, char **argv)
 				open_log();
 			}
 		}
+
 	}
 	
 	if (exit_sig == 1) {
