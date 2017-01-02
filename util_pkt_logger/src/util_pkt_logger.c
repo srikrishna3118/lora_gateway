@@ -360,12 +360,20 @@ int main(int argc, char **argv)
     int sockfd = 0;
     uint8_t recvBuff[256];
     memset(recvBuff, '0', sizeof(recvBuff));
-    struct sockaddr_in serv_addr;
+
+    struct sockaddr_in serv_addr,smap_addr;
 
     /* Initialize sockaddr_in data structure */
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(1680); // port
     serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+
+    /* Initialize smapaddr_in data structure */
+    smap_addr.sin_family = AF_INET;
+    smap_addr.sin_port = htons(1690); // port
+    smap_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
 
 
 
@@ -582,6 +590,25 @@ int main(int argc, char **argv)
 		    	}
 		    	/*close socket*/
 		    	close(sockfd);
+
+//			    /* Create a socket first */
+//			    if((sockfd = socket(AF_INET, SOCK_STREAM, 0))< 0){
+//			        printf("\n Error : Could not create socket \n");
+//			        return 1;
+//			    }
+//
+//				/* Attempt a connection for smap */
+//				if(connect(sockfd, (struct sockaddr *)&smap_addr, sizeof(smap_addr))<0){
+//					printf("\n Error : Connect Failed \n");
+//					return 1;
+//				}
+//		    	/* If read was success, send data. */
+//		    	if(p->size > 0){
+//		    		printf("Sending \n");
+//		    		write(sockfd, recvBuff, p->size);
+//		    	}
+//		    	/*close socket*/
+//		    	close(sockfd);
 			}
 
 			/* end of log file line */
